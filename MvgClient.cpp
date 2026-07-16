@@ -5,7 +5,7 @@
 #include <WiFiClientSecure.h>
 #include <ArduinoJson.h>
 
-bool MvgClient::fetch(Departure out[], int maxOut, int &count) {
+bool MvgClient::fetch(Departure out[], int maxOut, int &count, String &disruption) {
   WiFiClientSecure client;
   client.setInsecure();             // deliberate: see spec "Network & time"
   client.setBufferSizes(4096, 512); // trim BearSSL heap footprint
@@ -30,6 +30,8 @@ bool MvgClient::fetch(Departure out[], int maxOut, int &count) {
   filter[0]["realtimeDepartureTime"] = true;
   filter[0]["delayInMinutes"] = true;
   filter[0]["cancelled"] = true;
+  filter[0]["infos"][0]["message"] = true;
+  filter[0]["infos"][0]["type"] = true;
 
   JsonDocument doc;
   DeserializationError err =
@@ -46,6 +48,7 @@ bool MvgClient::fetch(Departure out[], int maxOut, int &count) {
 
   Departure parsed[MAX_DEPARTURES];
   int n = 0;
+  String incidentMsg, otherMsg;  // reason from kept departures; INCIDENT wins
   for (JsonObject d : doc.as<JsonArray>()) {
     if (n >= maxOut || n >= MAX_DEPARTURES) break;  // parsed[] is MAX_DEPARTURES-sized
     String tt = d["transportType"] | "";
@@ -57,6 +60,16 @@ bool MvgClient::fetch(Departure out[], int maxOut, int &count) {
     parsed[n].realtimeEpoch = (time_t)((d["realtimeDepartureTime"] | 0.0) / 1000.0);
     parsed[n].delayMin = d["delayInMinutes"] | 0;
     n++;
+    for (JsonObject info : d["infos"].as<JsonArray>()) {
+      String msg = info["message"] | "";
+      if (msg.length() == 0) continue;
+      String type = info["type"] | "";
+      if (type == "INCIDENT") {
+        if (incidentMsg.length() == 0) incidentMsg = msg;
+      } else if (otherMsg.length() == 0) {
+        otherMsg = msg;
+      }
+    }
   }
 
   // API order is by planned time; a big delay can reorder reality.
@@ -71,5 +84,9 @@ bool MvgClient::fetch(Departure out[], int maxOut, int &count) {
 
   for (int i = 0; i < n; i++) out[i] = parsed[i];
   count = n;
+  disruption = transliterate(incidentMsg.length() ? incidentMsg : otherMsg);
+  if (disruption.length() > DISRUPTION_MAX_LEN) {
+    disruption = disruption.substring(0, DISRUPTION_MAX_LEN);
+  }
   return true;
 }

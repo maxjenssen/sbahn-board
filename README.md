@@ -16,6 +16,8 @@ ticking down every second. Every 30 s it scrolls the detail line:
 
 - Real-time departures from the (unofficial) MVG API — no API key, no account
 - Countdown includes live delays; a `+N` marker shows when a train is late
+- Disruption alerts: when MVG reports an incident, the board flashes `!!!`
+  and scrolls the reason (e.g. `Stoerung: Reparatur an einer Weiche`)
 - Night dimming on a local-time schedule (DST handled via NTP + POSIX TZ)
 - WiFi onboarding via captive portal (WiFiManager) — no credentials in code
 - Degrades honestly: stale data shows `S1 ?`, never silently wrong
@@ -141,7 +143,10 @@ arduino-cli compile --fqbn esp8266:esp8266:d1_mini --upload -p <your-port> .
 | `S1 ++` / `S1 --` | Safety-net states (> 99 min away / none in data) — normally replaced by night idle |
 
 Every 30 s the board scrolls details: `S1 Muenchen: 7min +2 | 27min | 47min`.
-No fetch success for 15 min → automatic restart.
+During an active disruption it additionally plays an alert cycle every 15 s:
+`!!!` flashes, then the scrolled reason (`Stoerung: …`, taken live from the
+departures' `infos` field), then back to the countdown. Disruptions override
+night idle. No fetch success for 15 min → automatic restart.
 
 ## Tuning
 
@@ -158,6 +163,11 @@ Night idle: when nothing departs within `NO_TRAIN_OFF_THRESHOLD_MIN`
 signal through the nightly service gap. Fetches continue; the countdown
 returns automatically with the first morning train. Set the threshold
 very high to disable idle entirely.
+
+Disruption alert: cadence and length via `DISRUPTION_CYCLE_S` (15),
+`ALERT_BLINKS` (3), and `DISRUPTION_MAX_LEN` (100). The reason string comes
+from the kept departures' `infos[].message` (INCIDENT type preferred) and
+clears automatically once MVG stops reporting it.
 
 ## Host tests (pure logic)
 

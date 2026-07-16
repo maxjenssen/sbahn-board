@@ -8,6 +8,7 @@ public:
   void scrollLine(const String &text);
   void setBrightness(int level);  // 0..15; no-op unless changed
   void heartbeat(bool pixelOn);   // idle mode: dark screen, one random pixel while on
+  void alertBlink(int times);     // blocking "!!!" attention flashes
 
 private:
   String lastResting;

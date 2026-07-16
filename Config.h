@@ -22,6 +22,11 @@
 #define STALE_S 180
 #define WATCHDOG_S 900
 
+// --- Disruption alert ---
+#define DISRUPTION_CYCLE_S 15 // alert + reason replay interval while disrupted
+#define ALERT_BLINKS 3        // "!!!" flashes at the start of each cycle
+#define DISRUPTION_MAX_LEN 100 // cap for the scrolled reason text
+
 // --- Night idle ---
 #define NO_TRAIN_OFF_THRESHOLD_MIN 90 // blank the display when nothing departs within this window
 #define HEARTBEAT_PERIOD_S 5          // one blink cycle while idle

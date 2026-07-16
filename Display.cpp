@@ -28,6 +28,22 @@ void Display::setBrightness(int level) {
   matrix.setIntensity(level);
 }
 
+void Display::alertBlink(int times) {
+  hbInit = false;
+  int x = (matrix.width() - 3 * CHAR_W) / 2;
+  for (int i = 0; i < times; i++) {
+    matrix.fillScreen(LOW);
+    matrix.setCursor(x, 0);
+    matrix.print("!!!");
+    matrix.write();
+    delay(400);
+    matrix.fillScreen(LOW);
+    matrix.write();
+    delay(200);
+  }
+  lastResting = "";  // force redraw of whatever follows
+}
+
 void Display::heartbeat(bool pixelOn) {
   if (hbInit && pixelOn == hbOn) return;  // redraw only on blink transitions
   hbInit = true;

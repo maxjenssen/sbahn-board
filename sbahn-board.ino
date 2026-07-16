@@ -13,11 +13,13 @@ Display display;
 
 Departure deps[MAX_DEPARTURES];
 int depCount = 0;
+String disruptionMsg;
 bool haveFetched = false;
 bool fetchAttempted = false;
 unsigned long lastFetchMs = 0;
 unsigned long lastSuccessMs = 0;
 unsigned long lastScrollMs = 0;
+unsigned long lastAlertMs = 0;
 
 void setup() {
   Serial.begin(115200);
@@ -45,9 +47,11 @@ void setup() {
 void fetchNow() {
   Departure fresh[MAX_DEPARTURES];
   int n = 0;
-  if (mvg.fetch(fresh, MAX_DEPARTURES, n)) {
+  String reason;
+  if (mvg.fetch(fresh, MAX_DEPARTURES, n, reason)) {
     for (int i = 0; i < n; i++) deps[i] = fresh[i];
     depCount = n;
+    disruptionMsg = reason;
     haveFetched = true;
     lastSuccessMs = millis();
     time_t t = time(nullptr);
@@ -55,6 +59,9 @@ void fetchNow() {
     localtime_r(&t, &lt);
     Serial.printf("fetch ok: %d departures, heap %u, local %02d:%02d\n",
                   n, ESP.getFreeHeap(), lt.tm_hour, lt.tm_min);
+    if (disruptionMsg.length()) {
+      Serial.println("  disruption: " + disruptionMsg);
+    }
   } else {
     Serial.printf("fetch FAILED, heap %u, maxblock %u\n",
                   ESP.getFreeHeap(), ESP.getMaxFreeBlockSize());
@@ -95,11 +102,24 @@ void loop() {
   }
 
   bool stale = !haveFetched || (ms - lastSuccessMs) > STALE_S * 1000UL;
+  bool disrupted = !stale && disruptionMsg.length() > 0;
+
+  // Disruption alert cycle: "!!!" flashes, then the scrolled reason, then
+  // fall through to the countdown ("when's the next train").
+  if (disrupted && ms - lastAlertMs >= DISRUPTION_CYCLE_S * 1000UL) {
+    lastAlertMs = ms;
+    display.alertBlink(ALERT_BLINKS);
+    display.scrollLine(formatDisruptionLine(disruptionMsg));
+    ms = millis();  // blocking animation; re-sync timers
+    now = time(nullptr);
+  }
 
   // Service gap: blank the display with a heartbeat blink instead of
   // showing "--"/"++" all night. Stale data intentionally stays visible
-  // as "S1 ?" — a broken data path must not look like peaceful idle.
-  if (!stale && noUpcomingTrains(deps, depCount, now, NO_TRAIN_OFF_THRESHOLD_MIN)) {
+  // as "S1 ?", and an active disruption overrides idle — a broken line
+  // must not look like peaceful sleep.
+  if (!stale && !disrupted &&
+      noUpcomingTrains(deps, depCount, now, NO_TRAIN_OFF_THRESHOLD_MIN)) {
     display.heartbeat((ms % (HEARTBEAT_PERIOD_S * 1000UL)) < HEARTBEAT_ON_MS);
     delay(100);
     return;  // fetch timer and watchdog already ran above

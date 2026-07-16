@@ -67,6 +67,12 @@ inline String formatResting(const Departure *deps, int count, time_t now, bool s
   return String("S1 ") + String(m);
 }
 
+// Standalone disruption marquee pass; empty in, empty out.
+inline String formatDisruptionLine(const String &reason) {
+  if (reason.length() == 0) return String("");
+  return String("Stoerung: ") + reason;
+}
+
 // e.g. "S1 Muenchen: 7min +2 | 27min | 47min"; "+N" only when delayed.
 inline String formatScrollLine(const Departure *deps, int count, time_t now) {
   if (count == 0) return String("Keine S1 Abfahrten");

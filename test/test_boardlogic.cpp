@@ -88,6 +88,11 @@ int main() {
   assert(!noUpcomingTrains(d1, 3, now, 90));  // trains soon
   assert(noUpcomingTrains(d8, 1, now, 0));    // threshold 0: everything is "too far"
 
+  // formatDisruptionLine: prefixed reason, empty when no disruption
+  assert(formatDisruptionLine("Reparatur an einer Weiche") ==
+         "Stoerung: Reparatur an einer Weiche");
+  assert(formatDisruptionLine("") == "");
+
   printf("ALL TESTS PASSED\n");
   return 0;
 }

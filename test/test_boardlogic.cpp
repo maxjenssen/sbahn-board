@@ -79,6 +79,15 @@ int main() {
   // equal start/end disables the window entirely
   assert(!inNightWindow(22, 22, 22));
 
+  // noUpcomingTrains: idle when nothing departs within the threshold
+  assert(noUpcomingTrains(d1, 0, now, 90));   // empty list
+  Departure d7[1] = { dep(now + 91 * 60, 0) };
+  assert(noUpcomingTrains(d7, 1, now, 90));   // next train beyond the window
+  Departure d8[1] = { dep(now + 90 * 60, 0) };
+  assert(!noUpcomingTrains(d8, 1, now, 90));  // exactly at the window edge counts
+  assert(!noUpcomingTrains(d1, 3, now, 90));  // trains soon
+  assert(noUpcomingTrains(d8, 1, now, 0));    // threshold 0: everything is "too far"
+
   printf("ALL TESTS PASSED\n");
   return 0;
 }

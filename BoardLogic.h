@@ -39,6 +39,14 @@ inline bool inNightWindow(int hour, int startHour, int endHour) {
   return hour >= startHour || hour < endHour;
 }
 
+// True when nothing departs within thresholdMin minutes — the board goes
+// idle (heartbeat) instead of showing "--"/"++" through the service gap.
+inline bool noUpcomingTrains(const Departure *deps, int count, time_t now,
+                             int thresholdMin) {
+  if (count == 0) return true;
+  return minutesUntil(deps[0].realtimeEpoch, now) > thresholdMin;
+}
+
 inline bool keepDeparture(const String &transportType, const String &destination,
                           bool cancelled) {
   if (cancelled) return false;

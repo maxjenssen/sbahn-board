@@ -96,6 +96,15 @@ void loop() {
 
   bool stale = !haveFetched || (ms - lastSuccessMs) > STALE_S * 1000UL;
 
+  // Service gap: blank the display with a heartbeat blink instead of
+  // showing "--"/"++" all night. Stale data intentionally stays visible
+  // as "S1 ?" — a broken data path must not look like peaceful idle.
+  if (!stale && noUpcomingTrains(deps, depCount, now, NO_TRAIN_OFF_THRESHOLD_MIN)) {
+    display.heartbeat((ms % (HEARTBEAT_PERIOD_S * 1000UL)) < HEARTBEAT_ON_MS);
+    delay(100);
+    return;  // fetch timer and watchdog already ran above
+  }
+
   if (haveFetched && !stale && ms - lastScrollMs >= SCROLL_INTERVAL_S * 1000UL) {
     lastScrollMs = ms;
     display.scrollLine(formatScrollLine(deps, depCount, now));

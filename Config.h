@@ -22,6 +22,11 @@
 #define STALE_S 180
 #define WATCHDOG_S 900
 
+// --- Night idle ---
+#define NO_TRAIN_OFF_THRESHOLD_MIN 90 // blank the display when nothing departs within this window
+#define HEARTBEAT_PERIOD_S 5          // one blink cycle while idle
+#define HEARTBEAT_ON_MS 1000          // random pixel lit this long per cycle
+
 // --- WiFi ---
 #define AP_NAME "SBahnBoard"
 

@@ -134,11 +134,11 @@ arduino-cli compile --fqbn esp8266:esp8266:d1_mini --upload -p <your-port> .
 | Shows | Meaning |
 |---|---|
 | `S1 7` | Next city-bound S1 leaves in 7 min (delay included) |
-| `S1 ++` | Next one is > 99 min away |
-| `S1 --` | No city-bound S1 in the data (normal late at night) |
+| *dark, one pixel blinks every 5 s* | Night idle: nothing departs within 90 min — resumes by itself |
 | `S1 ?` | Data older than 3 min — fetches failing |
 | `sync` | Waiting for NTP time after boot |
 | `WiFi?` | No WiFi — join AP `SBahnBoard` and configure |
+| `S1 ++` / `S1 --` | Safety-net states (> 99 min away / none in data) — normally replaced by night idle |
 
 Every 30 s the board scrolls details: `S1 Muenchen: 7min +2 | 27min | 47min`.
 No fetch success for 15 min → automatic restart.
@@ -151,6 +151,13 @@ until `S1 12` reads correctly, set back to 0.
 
 Fetch log lines include the board's local time (`local HH:MM`) as a
 timezone sanity check.
+
+Night idle: when nothing departs within `NO_TRAIN_OFF_THRESHOLD_MIN`
+(90 min) the display blanks and blinks one random pixel for
+`HEARTBEAT_ON_MS` (1 s) every `HEARTBEAT_PERIOD_S` (5 s) — an "I'm alive"
+signal through the nightly service gap. Fetches continue; the countdown
+returns automatically with the first morning train. Set the threshold
+very high to disable idle entirely.
 
 ## Host tests (pure logic)
 

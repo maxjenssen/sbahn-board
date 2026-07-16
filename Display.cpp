@@ -28,7 +28,20 @@ void Display::setBrightness(int level) {
   matrix.setIntensity(level);
 }
 
+void Display::heartbeat(bool pixelOn) {
+  if (hbInit && pixelOn == hbOn) return;  // redraw only on blink transitions
+  hbInit = true;
+  hbOn = pixelOn;
+  lastResting = "";  // force countdown redraw when idle ends
+  matrix.fillScreen(LOW);
+  if (pixelOn) {
+    matrix.drawPixel(random(matrix.width()), random(matrix.height()), HIGH);
+  }
+  matrix.write();
+}
+
 void Display::showResting(const String &text) {
+  hbInit = false;  // normal rendering resumed; next idle entry redraws from scratch
   if (text == lastResting) return;
   lastResting = text;
   matrix.fillScreen(LOW);
@@ -40,6 +53,7 @@ void Display::showResting(const String &text) {
 }
 
 void Display::scrollLine(const String &text) {
+  hbInit = false;
   for (int i = 0; i < CHAR_W * (int)text.length() + matrix.width() - 1 - SPACER; i++) {
     matrix.fillScreen(LOW);
     int letter = i / CHAR_W;

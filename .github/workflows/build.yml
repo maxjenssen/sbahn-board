@@ -27,3 +27,4 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - run: g++ -std=c++17 -DHOST_TEST -I. -o /tmp/boardlogic-tests test/test_boardlogic.cpp && /tmp/boardlogic-tests
+      - run: g++ -std=c++17 -DHOST_TEST -I. -o /tmp/irislogic-tests test/test_irislogic.cpp && /tmp/irislogic-tests

@@ -30,5 +30,19 @@ public:
     size_t p = s.find(sub);
     return p == std::string::npos ? -1 : (int)p;
   }
+  int indexOf(const char *sub, unsigned int from) const {
+    if (from >= s.size()) return -1;
+    size_t p = s.find(sub, from);
+    return p == std::string::npos ? -1 : (int)p;
+  }
+  String substring(unsigned int from) const {
+    if (from >= s.size()) return String();
+    return String(s.substr(from));
+  }
+  String substring(unsigned int from, unsigned int to) const {
+    if (from >= s.size() || to <= from) return String();
+    if (to > s.size()) to = (unsigned int)s.size();
+    return String(s.substr(from, to - from));
+  }
 };
 inline String operator+(const char *a, const String &b) { return String(a) + b; }

@@ -18,6 +18,9 @@ ticking down every second. Every 30 s it scrolls the detail line:
 - Countdown includes live delays; a `+N` marker shows when a train is late
 - Disruption alerts: when MVG reports an incident, the board flashes `!!!`
   and scrolls the reason (e.g. `Stoerung: Reparatur an einer Weiche`)
+- Automatic failover to DB's keyless IRIS timetable API when the MVG API is
+  down — independent infrastructure, field-proven during the July 2026
+  region-wide DEFAS outage; fails back to MVG once it recovers
 - Night dimming on a local-time schedule (DST handled via NTP + POSIX TZ)
 - WiFi onboarding via captive portal (WiFiManager) — no credentials in code
 - Degrades honestly: stale data shows `S1 ?`, never silently wrong
@@ -70,6 +73,22 @@ returning that shape, the API changed — an earlier incarnation of this
 project died of exactly that (bahnhof.de API, now a 404), which is why this
 contract lives at the top of the README.
 
+### Fallback source: DB IRIS (keyless, independent of MVG/DEFAS)
+
+```bash
+# hourly schedule (~7 KB) and realtime changes/delays/Stoerung messages
+curl 'https://iris.noncd.db.de/iris-tts/timetable/plan/8001647/260716/10'
+curl 'https://iris.noncd.db.de/iris-tts/timetable/rchg/8001647'
+```
+
+After `MVG_FAIL_STREAK` (3) consecutive MVG failures the board switches to
+IRIS: hourly plans + a one-time full change-set (`fchg`, can be ~200 KB —
+stream-scanned, never buffered), then per-minute deltas. City-bound trains
+are those whose departure path contains `IRIS_KEEP_PPTH` ("München"). IRIS
+carries delay/cancellation data and a Störung *category* but no prose
+reason — during fallback the alert shows a generic `Betriebsstoerung (DB
+Meldung)`. MVG is probed again every `MVG_RETRY_EVERY` (10) cycles.
+
 ## Adapting to your station
 
 1. **Find your station's `globalId`:**
@@ -91,17 +110,24 @@ contract lives at the top of the README.
    `Config.h` includes it automatically when present; any `#define` from
    `Config.h` can be overridden the same way.
 
-2. **Direction filter:** edit `EXCLUDE_DEST[]` in `BoardLogic.h` to the
+2. **Find your station's DB EVA number** (for the IRIS fallback) and set
+   `STATION_EVA`:
+
+   ```bash
+   curl 'https://iris.noncd.db.de/iris-tts/timetable/station/YOUR_STATION_NAME'
+   ```
+
+3. **Direction filter:** edit `EXCLUDE_DEST[]` in `BoardLogic.h` to the
    destination substrings you want to hide (the terminus names of the
    direction you *don't* care about). Empty the list to show both directions.
 
-3. **Labels:** the `"S1 "` resting prefix and `"S1 Muenchen: "` scroll prefix
+4. **Labels:** the `"S1 "` resting prefix and `"S1 Muenchen: "` scroll prefix
    are hardcoded in `formatResting`/`formatScrollLine` in `BoardLogic.h` —
    this is deliberately a small, readable firmware you adapt by editing, not
    a config framework. The host tests pin the display strings; update them
    together.
 
-4. **Night window / brightness / intervals:** all in `Config.h`
+5. **Night window / brightness / intervals:** all in `Config.h`
    (`NIGHT_START_HOUR` 22, `NIGHT_END_HOUR` 5, `NIGHT_BRIGHTNESS` 0 — set the
    hours equal to disable). Timezone is `TZ_Europe_Berlin` in the `.ino`;
    swap the TZ constant if you're adapting beyond Germany.
@@ -173,11 +199,15 @@ clears automatically once MVG stops reporting it.
 
 ```bash
 g++ -std=c++17 -DHOST_TEST -I. -o test/test_boardlogic.bin test/test_boardlogic.cpp && ./test/test_boardlogic.bin
+g++ -std=c++17 -DHOST_TEST -I. -o test/test_irislogic.bin test/test_irislogic.cpp && ./test/test_irislogic.bin
 ```
 
 Covers the direction filter, countdown math, umlaut transliteration, all
-display-string states and their boundaries, and the night-window logic —
-via a 30-line Arduino-String shim, no hardware or emulator required.
+display-string states and their boundaries, the night-window logic, and the
+complete IRIS pipeline (XML attribute scanning, chunk-split stream
+reassembly, Berlin-local time parsing, delay/cancellation merge, Störung
+window validity) — via a small Arduino-String shim, no hardware or emulator
+required. The IRIS fixtures are distilled from live Störung-day captures.
 
 ## Troubleshooting
 

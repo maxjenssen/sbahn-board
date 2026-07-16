@@ -22,6 +22,13 @@
 #define STALE_S 180
 #define WATCHDOG_S 900
 
+// --- IRIS fallback (DB's keyless open timetable API; survives MVG outages) ---
+#define STATION_EVA "8001647"           // DB EVA number of the station (Eching)
+#define IRIS_HOST "https://iris.noncd.db.de/iris-tts/timetable"
+#define IRIS_KEEP_PPTH "M\xC3\xBCnchen" // keep trains whose departure path contains this
+#define MVG_FAIL_STREAK 3               // switch to IRIS after this many MVG failures
+#define MVG_RETRY_EVERY 10              // while on IRIS, retry MVG every Nth cycle
+
 // --- Disruption alert ---
 #define DISRUPTION_CYCLE_S 15 // alert + reason replay interval while disrupted
 #define ALERT_BLINKS 3        // "!!!" flashes at the start of each cycle

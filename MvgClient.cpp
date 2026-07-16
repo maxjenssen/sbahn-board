@@ -7,8 +7,11 @@
 
 bool MvgClient::fetch(Departure out[], int maxOut, int &count, String &disruption) {
   WiFiClientSecure client;
-  client.setInsecure();             // deliberate: see spec "Network & time"
-  client.setBufferSizes(4096, 512); // trim BearSSL heap footprint
+  client.setInsecure();              // deliberate: see spec "Network & time"
+  // rx must hold one full TLS record: mvg.de's ~4.6 KB cert chain arrives as
+  // a single >4 KB record from some edge nodes (observed live: HTTP -5 with
+  // a 4 KB buffer). 16 KB is the protocol-safe maximum; heap allows it.
+  client.setBufferSizes(16384, 512);
   HTTPClient http;
   http.useHTTP10(true);             // no chunked encoding -> stream-parse safe
   http.setTimeout(10000);

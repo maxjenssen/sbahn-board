@@ -182,9 +182,10 @@ via a 30-line Arduino-String shim, no hardware or emulator required.
 ## Troubleshooting
 
 - Persistent `fetch FAILED` in serial: the preceding `mvg:` line names the
-  failing stage — `mvg: HTTP <negative>` is the TLS/connect layer (first
-  suspect the reduced `setBufferSizes(4096, 512)` in `MvgClient.cpp`; raise
-  the rx buffer or probe MFLN), `mvg: HTTP 4xx/5xx` is the API itself,
+  failing stage — `mvg: HTTP <negative>` is the TLS/connect layer (the rx
+  buffer in `MvgClient.cpp` must hold one full TLS record; 16 KB is the
+  safe value — a trimmed 4 KB buffer failed in the field when the cert
+  chain arrived as a single record), `mvg: HTTP 4xx/5xx` is the API itself,
   `mvg: parse …`/`mvg: non-array response` means the response shape changed
   (re-check the curl contract above). A shrinking `maxblock` value on the
   failure line means heap fragmentation. Occasional isolated failures are

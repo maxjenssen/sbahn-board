@@ -67,15 +67,17 @@ inline bool keepDeparture(const String &transportType, const String &destination
 
 // Resting view, 5 chars max (32 px / 6 px per char). Spec table:
 // stale -> "S1 ?", none -> "S1 --", >99 min -> "S1 ++", else "S1 N" —
-// with '*' replacing the space when the next train is delayed ("S1*7"),
-// since a trailing marker would not fit at two-digit minutes.
+// with a 1 Hz blinking dot in the separator when the next train is
+// delayed ("S1.7" <-> "S1 7"); a trailing marker would not fit at
+// two-digit minutes. Blink phase derives from the epoch second, so the
+// 250 ms render tick plus change-detection produces the blink for free.
 inline String formatResting(const Departure *deps, int count, time_t now, bool stale) {
   if (stale) return String("S1 ?");
   if (count == 0) return String("S1 --");
   int m = minutesUntil(deps[0].realtimeEpoch, now);
   if (m > 99) return String("S1 ++");
-  const char *sep = deps[0].delayMin >= 1 ? "*" : " ";
-  return String("S1") + sep + String(m);
+  bool dotOn = deps[0].delayMin >= 1 && (now % 2 == 0);
+  return String("S1") + (dotOn ? "." : " ") + String(m);
 }
 
 // Standalone disruption marquee pass; empty in, empty out.

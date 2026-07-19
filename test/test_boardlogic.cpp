@@ -43,7 +43,7 @@ int main() {
   Departure d1[3] = { dep(now + 7 * 60 + 30, 2), dep(now + 27 * 60, 0), dep(now + 47 * 60, 0) };
   assert(formatResting(d1, 3, now, true) == "S1 ?");    // stale wins
   assert(formatResting(d1, 0, now, false) == "S1 --");  // none
-  assert(formatResting(d1, 3, now, false) == "S1*7"); // d1[0] has delayMin 2
+  assert(formatResting(d1, 3, now, false) == "S1.7"); // d1[0] has delayMin 2; even second
   Departure d2[1] = { dep(now + 47 * 60, 0) };
   assert(formatResting(d2, 1, now, false) == "S1 47");
   Departure d3[1] = { dep(now + 99 * 60 + 30, 0) };
@@ -101,13 +101,16 @@ int main() {
   assert(effectiveEpoch(now + 120, now + 120, 0) == now + 120);          // on time
   assert(effectiveEpoch(now + 60, now + 120, -1) == now + 60);           // early train, prognosis wins
 
-  // formatResting: '*' replaces the space when the next train is delayed
+  // formatResting: a 1 Hz blinking dot replaces the space when the next
+  // train is delayed — phase derived from the epoch second (now is even)
   Departure dl1[1] = { dep(now + 7 * 60, 5) };
-  assert(formatResting(dl1, 1, now, false) == "S1*7");
+  assert(formatResting(dl1, 1, now, false) == "S1.7");      // even second: dot on
+  assert(formatResting(dl1, 1, now - 1, false) == "S1 7");  // odd second: dot off
   Departure dl2[1] = { dep(now + 47 * 60, 1) };
-  assert(formatResting(dl2, 1, now, false) == "S1*47");
+  assert(formatResting(dl2, 1, now, false) == "S1.47");
   Departure dl3[1] = { dep(now + 47 * 60, 0) };
-  assert(formatResting(dl3, 1, now, false) == "S1 47"); // unchanged when on time
+  assert(formatResting(dl3, 1, now, false) == "S1 47");     // on time: no dot,
+  assert(formatResting(dl3, 1, now - 1, false) == "S1 47"); // either phase
 
   printf("ALL TESTS PASSED\n");
   return 0;

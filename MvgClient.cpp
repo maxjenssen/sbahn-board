@@ -31,6 +31,7 @@ bool MvgClient::fetch(Departure out[], int maxOut, int &count, String &disruptio
   filter[0]["transportType"] = true;
   filter[0]["destination"] = true;
   filter[0]["realtimeDepartureTime"] = true;
+  filter[0]["plannedDepartureTime"] = true;
   filter[0]["delayInMinutes"] = true;
   filter[0]["cancelled"] = true;
   filter[0]["infos"][0]["message"] = true;
@@ -60,8 +61,11 @@ bool MvgClient::fetch(Departure out[], int maxOut, int &count, String &disruptio
     if (!keepDeparture(tt, dest, cancelled)) continue;
     parsed[n].label = String(d["label"] | "S1");
     parsed[n].destination = transliterate(dest);
-    parsed[n].realtimeEpoch = (time_t)((d["realtimeDepartureTime"] | 0.0) / 1000.0);
+    time_t rt = (time_t)((d["realtimeDepartureTime"] | 0.0) / 1000.0);
+    time_t pt = (time_t)((d["plannedDepartureTime"] | 0.0) / 1000.0);
     parsed[n].delayMin = d["delayInMinutes"] | 0;
+    parsed[n].realtimeEpoch =
+        pt > 0 ? effectiveEpoch(rt, pt, parsed[n].delayMin) : rt;
     n++;
     for (JsonObject info : d["infos"].as<JsonArray>()) {
       String msg = info["message"] | "";

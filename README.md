@@ -161,7 +161,7 @@ arduino-cli compile --fqbn esp8266:esp8266:d1_mini --upload -p <your-port> .
 
 | Shows | Meaning |
 |---|---|
-| `S1 7` | Next city-bound S1 leaves in 7 min (delay included) |
+| `S1 7` / `S1*7` | Next city-bound S1 leaves in 7 min, delay already included — `*` means it is running late |
 | *dark, one pixel blinks every 5 s* | Night idle: nothing departs within 90 min — resumes by itself |
 | `S1 ?` | Data older than 3 min — fetches failing |
 | `sync` | Waiting for NTP time after boot |

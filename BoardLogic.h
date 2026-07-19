@@ -32,6 +32,14 @@ inline int minutesUntil(time_t dep, time_t now) {
 
 inline bool isTimeSynced(time_t now) { return now > 1000000000; }
 
+// MVG occasionally reports delayInMinutes while realtimeDepartureTime still
+// equals the planned time (observed in the field). Trust whichever is later:
+// a consistent prognosis wins; a stale one is corrected by planned + delay.
+inline time_t effectiveEpoch(time_t realtime, time_t planned, int delayMin) {
+  time_t derived = planned + (time_t)delayMin * 60;
+  return realtime > derived ? realtime : derived;
+}
+
 // Half-open local-hour window [startHour, endHour), wrapping midnight when
 // startHour > endHour (e.g. 22..5). Equal start/end means "never".
 inline bool inNightWindow(int hour, int startHour, int endHour) {
@@ -58,13 +66,16 @@ inline bool keepDeparture(const String &transportType, const String &destination
 }
 
 // Resting view, 5 chars max (32 px / 6 px per char). Spec table:
-// stale -> "S1 ?", none -> "S1 --", >99 min -> "S1 ++", else "S1 N".
+// stale -> "S1 ?", none -> "S1 --", >99 min -> "S1 ++", else "S1 N" —
+// with '*' replacing the space when the next train is delayed ("S1*7"),
+// since a trailing marker would not fit at two-digit minutes.
 inline String formatResting(const Departure *deps, int count, time_t now, bool stale) {
   if (stale) return String("S1 ?");
   if (count == 0) return String("S1 --");
   int m = minutesUntil(deps[0].realtimeEpoch, now);
   if (m > 99) return String("S1 ++");
-  return String("S1 ") + String(m);
+  const char *sep = deps[0].delayMin >= 1 ? "*" : " ";
+  return String("S1") + sep + String(m);
 }
 
 // Standalone disruption marquee pass; empty in, empty out.

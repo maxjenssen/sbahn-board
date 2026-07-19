@@ -80,6 +80,48 @@ inline String formatResting(const Departure *deps, int count, time_t now, bool s
   return String("S1") + (dotOn ? "." : " ") + String(m);
 }
 
+// Scan a raw Tagesschau feed prefix for an Eilmeldung. The feed is
+// pretty-printed JSON with spaces around colons; within each item the
+// title precedes the breakingNews flag (verified against live captures),
+// so the nearest preceding "title" belongs to the flagged item. Returns
+// the raw title or "".
+inline String extractBreakingTitle(const String &raw) {
+  int pos = 0;
+  while ((pos = raw.indexOf("\"breakingNews\"", pos)) >= 0) {
+    int v = pos + 14;
+    while (v < (int)raw.length() &&
+           (raw[v] == ' ' || raw[v] == ':' || raw[v] == '\t')) {
+      v++;
+    }
+    if (raw.indexOf("true", v) == v) {
+      int t = -1, search = 0;
+      while (true) {
+        int nx = raw.indexOf("\"title\"", search);
+        if (nx < 0 || nx > pos) break;
+        t = nx;
+        search = nx + 1;
+      }
+      if (t >= 0) {
+        int q1 = raw.indexOf("\"", t + 7);  // opening quote of the value
+        if (q1 >= 0) {
+          int q2 = q1;
+          while ((q2 = raw.indexOf("\"", q2 + 1)) >= 0 && raw[q2 - 1] == '\\') {
+          }
+          if (q2 > q1) return raw.substring(q1 + 1, q2);
+        }
+      }
+    }
+    pos += 14;
+  }
+  return String("");
+}
+
+// Loud news marquee pass; empty in, empty out.
+inline String formatBreakingLine(const String &title) {
+  if (title.length() == 0) return String("");
+  return String("EIL: ") + title;
+}
+
 // First forecast slot whose precipitation reaches thresholdMm; 0 if none.
 inline time_t firstRainEpoch(const time_t *times, const float *precip, int n,
                              float thresholdMm) {

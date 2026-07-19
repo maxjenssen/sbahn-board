@@ -21,6 +21,11 @@ ticking down every second. Every 30 s it scrolls the detail line:
 - Automatic failover to DB's keyless IRIS timetable API when the MVG API is
   down — independent infrastructure, field-proven during the July 2026
   region-wide DEFAS outage; fails back to MVG once it recovers
+- Rain warning via Open-Meteo (keyless): `Regen in ~45 min` / `~3 Std`
+  scrolls every 5 min when precipitation enters the 12 h forecast
+- Tagesschau Eilmeldungen (keyless): genuine breaking news alerts with the
+  `!!!` treatment — `EIL: <headline>`, new headlines alert immediately
+- Every data source is keyless: no API keys anywhere in this project
 - Night dimming on a local-time schedule (DST handled via NTP + POSIX TZ)
 - WiFi onboarding via captive portal (WiFiManager) — no credentials in code
 - Degrades honestly: stale data shows `S1 ?`, never silently wrong
@@ -88,6 +93,16 @@ are those whose departure path contains `IRIS_KEEP_PPTH` ("München"). IRIS
 carries delay/cancellation data and a Störung *category* but no prose
 reason — during fallback the alert shows a generic `Betriebsstoerung (DB
 Meldung)`. MVG is probed again every `MVG_RETRY_EVERY` (10) cycles.
+
+### Weather and news sources
+
+```bash
+# rain forecast (15-min slots, 12 h) — station coordinates from Config.h
+curl 'https://api.open-meteo.com/v1/forecast?latitude=48.303149&longitude=11.617184&minutely_15=precipitation&forecast_minutely_15=48&timeformat=unixtime'
+# Eilmeldungen: items carry "breakingNews": true; the firmware reads only
+# the feed head (~24 KB of ~470 KB) since breaking items sort first
+curl 'https://www.tagesschau.de/api2u/news'
+```
 
 ## Adapting to your station
 
@@ -194,6 +209,16 @@ Disruption alert: cadence and length via `DISRUPTION_CYCLE_S` (15),
 `ALERT_BLINKS` (3), and `DISRUPTION_MAX_LEN` (100). The reason string comes
 from the kept departures' `infos[].message` (INCIDENT type preferred) and
 clears automatically once MVG stops reporting it.
+
+Rain warning: `WEATHER_LAT`/`WEATHER_LON` (set your station's coordinates;
+`ConfigLocal.h`-overridable like the station ids), `RAIN_MM_THRESHOLD`
+(0.1 mm per 15 min), `WEATHER_FETCH_INTERVAL_S` (900),
+`RAIN_SCROLL_INTERVAL_S` (300). Suppressed by night idle.
+
+Breaking news: `NEWS_FETCH_INTERVAL_S` / `NEWS_SCROLL_INTERVAL_S` (600),
+`NEWS_MAX_LEN` (100), `NEWS_READ_CAP` (24 KB feed-head scan). A new
+headline alerts immediately; an ongoing one repeats each interval; quiet
+during night idle.
 
 ## Host tests (pure logic)
 

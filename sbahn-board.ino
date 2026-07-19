@@ -8,11 +8,13 @@
 #include "MvgClient.h"
 #include "IrisClient.h"
 #include "WeatherClient.h"
+#include "NewsClient.h"
 #include "Display.h"
 
 MvgClient mvg;
 IrisClient iris;
 WeatherClient weather;
+NewsClient news;
 Display display;
 
 Departure deps[MAX_DEPARTURES];
@@ -31,6 +33,11 @@ time_t rainStartEpoch = 0;
 bool weatherAttempted = false;
 unsigned long lastWeatherMs = 0;
 unsigned long lastRainScrollMs = 0;
+String breakingMsg;
+String lastShownBreaking;
+bool newsAttempted = false;
+unsigned long lastNewsMs = 0;
+unsigned long lastNewsScrollMs = 0;
 
 void setup() {
   Serial.begin(115200);
@@ -149,6 +156,19 @@ void loop() {
     now = time(nullptr);
   }
 
+  if (!newsAttempted || ms - lastNewsMs >= NEWS_FETCH_INTERVAL_S * 1000UL) {
+    newsAttempted = true;
+    lastNewsMs = ms;
+    String b;
+    if (news.fetch(b)) {
+      breakingMsg = b;
+      Serial.printf("news ok: %s\n",
+                    b.length() ? b.c_str() : "keine Eilmeldung");
+    }
+    ms = millis();  // news fetch also blocks; re-sync
+    now = time(nullptr);
+  }
+
   bool stale = !haveFetched || (ms - lastSuccessMs) > STALE_S * 1000UL;
   bool disrupted = !stale && disruptionMsg.length() > 0;
 
@@ -186,6 +206,20 @@ void loop() {
     display.scrollLine(rainLine);
     ms = millis();
     now = time(nullptr);
+  }
+
+  // Eilmeldung: a NEW headline alerts immediately; an ongoing one repeats
+  // every NEWS_SCROLL_INTERVAL_S. Quiet at night (idle returns above).
+  if (breakingMsg.length()) {
+    bool fresh = !(breakingMsg == lastShownBreaking);
+    if (fresh || ms - lastNewsScrollMs >= NEWS_SCROLL_INTERVAL_S * 1000UL) {
+      lastShownBreaking = breakingMsg;
+      lastNewsScrollMs = ms;
+      display.alertBlink(ALERT_BLINKS);
+      display.scrollLine(formatBreakingLine(breakingMsg));
+      ms = millis();
+      now = time(nullptr);
+    }
   }
 
   display.showResting(formatResting(deps, depCount, now, stale));

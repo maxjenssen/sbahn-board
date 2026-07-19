@@ -134,6 +134,27 @@ int main() {
   assert(formatRainLine(now - 10 * 60, now) == "Regen");      // raining now
   assert(formatRainLine(now - 61 * 60, now) == "");           // stale start, drop
 
+  // extractBreakingTitle: scan a raw Tagesschau feed prefix (pretty-printed,
+  // spaces around colons; title precedes the flag within each item)
+  {
+    const char *none =
+        "{\"news\":[{\"title\" : \"Ruhige Lage\", \"breakingNews\" : false},"
+        "{\"title\" : \"Auch ruhig\", \"breakingNews\" : false},";
+    const char *breaking =
+        "{\"news\":[{\"title\" : \"Alte Meldung\", \"breakingNews\" : false},"
+        "{\"sophoraId\":\"x\", \"title\" : \"Grosses Ereignis in M\xC3\xBCnchen\","
+        " \"date\" : \"2026-07-19\", \"breakingNews\" : true},";
+    const char *flagNoTitle = "{\"news\":[{\"breakingNews\" : true},";
+    assert(extractBreakingTitle(none) == "");
+    assert(extractBreakingTitle(breaking) == "Grosses Ereignis in M\xC3\xBCnchen");
+    assert(extractBreakingTitle(flagNoTitle) == "");
+    assert(extractBreakingTitle("partial window without any fla") == "");
+  }
+
+  // formatBreakingLine
+  assert(formatBreakingLine("Grosses Ereignis") == "EIL: Grosses Ereignis");
+  assert(formatBreakingLine("") == "");
+
   printf("ALL TESTS PASSED\n");
   return 0;
 }

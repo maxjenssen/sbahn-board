@@ -36,6 +36,13 @@
 #define WEATHER_FETCH_INTERVAL_S 900  // forecast refresh (12 h horizon, 15-min slots)
 #define RAIN_SCROLL_INTERVAL_S 300    // rain announcement cadence
 
+// --- Breaking news (Tagesschau Eilmeldungen, keyless) ---
+#define NEWS_URL "https://www.tagesschau.de/api2u/news"
+#define NEWS_FETCH_INTERVAL_S 600  // poll cadence
+#define NEWS_SCROLL_INTERVAL_S 600 // repeat cadence while an Eilmeldung is active
+#define NEWS_MAX_LEN 100
+#define NEWS_READ_CAP 24576        // scan only the feed head; Eilmeldungen sort first
+
 // --- Disruption alert ---
 #define DISRUPTION_CYCLE_S 15 // alert + reason replay interval while disrupted
 #define ALERT_BLINKS 3        // "!!!" flashes at the start of each cycle

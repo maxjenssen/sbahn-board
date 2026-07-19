@@ -80,6 +80,28 @@ inline String formatResting(const Departure *deps, int count, time_t now, bool s
   return String("S1") + (dotOn ? "." : " ") + String(m);
 }
 
+// First forecast slot whose precipitation reaches thresholdMm; 0 if none.
+inline time_t firstRainEpoch(const time_t *times, const float *precip, int n,
+                             float thresholdMm) {
+  for (int i = 0; i < n; i++) {
+    if (precip[i] >= thresholdMm) return times[i];
+  }
+  return 0;
+}
+
+// Rain announcement: "" when dry or stale, "Regen" while raining (start
+// passed, within the last hour), minutes under 90, rounded hours from 90.
+inline String formatRainLine(time_t rainEpoch, time_t now) {
+  if (rainEpoch == 0) return String("");
+  if (rainEpoch <= now) {
+    return (now - rainEpoch <= 3600) ? String("Regen") : String("");
+  }
+  long mins = (rainEpoch - now) / 60;
+  if (mins < 90) return String("Regen in ~") + String((int)mins) + " min";
+  int hours = (int)((mins + 30) / 60);
+  return String("Regen in ~") + String(hours) + " Std";
+}
+
 // Standalone disruption marquee pass; empty in, empty out.
 inline String formatDisruptionLine(const String &reason) {
   if (reason.length() == 0) return String("");

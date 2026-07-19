@@ -7,10 +7,12 @@
 #include "BoardLogic.h"
 #include "MvgClient.h"
 #include "IrisClient.h"
+#include "WeatherClient.h"
 #include "Display.h"
 
 MvgClient mvg;
 IrisClient iris;
+WeatherClient weather;
 Display display;
 
 Departure deps[MAX_DEPARTURES];
@@ -25,6 +27,10 @@ unsigned long lastFetchMs = 0;
 unsigned long lastSuccessMs = 0;
 unsigned long lastScrollMs = 0;
 unsigned long lastAlertMs = 0;
+time_t rainStartEpoch = 0;
+bool weatherAttempted = false;
+unsigned long lastWeatherMs = 0;
+unsigned long lastRainScrollMs = 0;
 
 void setup() {
   Serial.begin(115200);
@@ -131,6 +137,18 @@ void loop() {
     now = time(nullptr);
   }
 
+  if (!weatherAttempted || ms - lastWeatherMs >= WEATHER_FETCH_INTERVAL_S * 1000UL) {
+    weatherAttempted = true;
+    lastWeatherMs = ms;
+    if (weather.fetch(rainStartEpoch)) {
+      String r = formatRainLine(rainStartEpoch, now);
+      Serial.printf("weather ok: %s\n",
+                    r.length() ? r.c_str() : "kein Regen (12h)");
+    }
+    ms = millis();  // weather fetch also blocks; re-sync
+    now = time(nullptr);
+  }
+
   bool stale = !haveFetched || (ms - lastSuccessMs) > STALE_S * 1000UL;
   bool disrupted = !stale && disruptionMsg.length() > 0;
 
@@ -158,6 +176,16 @@ void loop() {
   if (haveFetched && !stale && ms - lastScrollMs >= SCROLL_INTERVAL_S * 1000UL) {
     lastScrollMs = ms;
     display.scrollLine(formatScrollLine(deps, depCount, now));
+    ms = millis();
+    now = time(nullptr);
+  }
+
+  String rainLine = formatRainLine(rainStartEpoch, now);
+  if (rainLine.length() && ms - lastRainScrollMs >= RAIN_SCROLL_INTERVAL_S * 1000UL) {
+    lastRainScrollMs = ms;
+    display.scrollLine(rainLine);
+    ms = millis();
+    now = time(nullptr);
   }
 
   display.showResting(formatResting(deps, depCount, now, stale));

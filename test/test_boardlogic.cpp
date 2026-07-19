@@ -112,6 +112,28 @@ int main() {
   assert(formatResting(dl3, 1, now, false) == "S1 47");     // on time: no dot,
   assert(formatResting(dl3, 1, now - 1, false) == "S1 47"); // either phase
 
+  // firstRainEpoch: first forecast slot at/above the mm threshold
+  {
+    time_t ts[5] = { now - 120, now + 780, now + 1680, now + 2580, now + 3480 };
+    float dry[5] = { 0.0f, 0.0f, 0.05f, 0.0f, 0.0f };
+    float wet[5] = { 0.0f, 0.0f, 0.05f, 0.2f, 0.5f };
+    float wetNow[5] = { 0.3f, 0.0f, 0.0f, 0.0f, 0.0f };
+    assert(firstRainEpoch(ts, dry, 5, 0.1f) == 0);            // nothing reaches threshold
+    assert(firstRainEpoch(ts, wet, 5, 0.1f) == now + 2580);   // 0.05 skipped, 0.2 hits
+    assert(firstRainEpoch(ts, wetNow, 5, 0.1f) == now - 120); // already raining slot
+    assert(firstRainEpoch(ts, wet, 5, 0.5f) == now + 3480);   // threshold boundary inclusive
+  }
+
+  // formatRainLine: minutes under 90, rounded hours from 90, "Regen" while
+  // raining (start passed, within the last hour), silent otherwise
+  assert(formatRainLine(0, now) == "");
+  assert(formatRainLine(now + 45 * 60, now) == "Regen in ~45 min");
+  assert(formatRainLine(now + 89 * 60, now) == "Regen in ~89 min");
+  assert(formatRainLine(now + 90 * 60, now) == "Regen in ~2 Std");
+  assert(formatRainLine(now + 3 * 3600, now) == "Regen in ~3 Std");
+  assert(formatRainLine(now - 10 * 60, now) == "Regen");      // raining now
+  assert(formatRainLine(now - 61 * 60, now) == "");           // stale start, drop
+
   printf("ALL TESTS PASSED\n");
   return 0;
 }

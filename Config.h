@@ -29,6 +29,13 @@
 #define MVG_FAIL_STREAK 3               // switch to IRIS after this many MVG failures
 #define MVG_RETRY_EVERY 10              // while on IRIS, retry MVG every Nth cycle
 
+// --- Rain warning (Open-Meteo, keyless) ---
+#define WEATHER_LAT "48.303149"       // Eching station; override in ConfigLocal.h
+#define WEATHER_LON "11.617184"
+#define RAIN_MM_THRESHOLD 0.1f        // 15-min precipitation that counts as rain
+#define WEATHER_FETCH_INTERVAL_S 900  // forecast refresh (12 h horizon, 15-min slots)
+#define RAIN_SCROLL_INTERVAL_S 300    // rain announcement cadence
+
 // --- Disruption alert ---
 #define DISRUPTION_CYCLE_S 15 // alert + reason replay interval while disrupted
 #define ALERT_BLINKS 3        // "!!!" flashes at the start of each cycle
